@@ -6,6 +6,7 @@ Tests: config, database, logging, search API, and basic operations.
 """
 
 import sys
+import os
 from pathlib import Path
 
 # Test results tracking

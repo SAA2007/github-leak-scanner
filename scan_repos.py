@@ -10,6 +10,7 @@ import csv
 from pathlib import Path
 import logging
 from tqdm import tqdm
+from datetime import datetime
 
 # Import our modules
 from config import config
@@ -363,7 +364,7 @@ def main():
         
         if not repos:
             logger.warning("⚠️  No repositories to scan")
-            db.update_scan_run(scan_run.id, end_time=db.datetime.now(), repos_scanned=0)
+            db.update_scan_run(scan_run.id, end_time=datetime.now(), repos_scanned=0)
             return
         logger.info(f"📋 Scanning {len(repos)} repositories...")
         print()  # Newline before progress bar
@@ -416,17 +417,29 @@ def main():
                 pbar.update(1)
                 pbar.set_postfix_str(f"Found: {total_new} new secrets")
                 
-                # Cleanup cloned repo
+                # Cleanup cloned repo with better Windows handling
                 try:
                     import shutil
-                    shutil.rmtree(repo_path)
-                except:
-                    pass
+                    import time
+                    
+                    # Try normal removal first
+                    shutil.rmtree(repo_path, ignore_errors=False)
+                except PermissionError:
+                    # Windows file lock - try harder
+                    try:
+                        time.sleep(0.5)  # Brief pause
+                        import subprocess
+                        subprocess.run(['rmdir', '/S', '/Q', str(repo_path)], 
+                                     shell=True, check=False)
+                    except Exception as e:
+                        logger.warning(f"Could not cleanup {repo_path.name}: {e}")
+                except Exception as e:
+                    logger.debug(f"Cleanup error (non-critical): {e}")
         
         # Update scan run
         db.update_scan_run(
             scan_run.id,
-            end_time=db.datetime.now(),
+            end_time=datetime.now(),
             repos_scanned=repos_scanned,
             findings_count=total_findings,
             new_findings_count=total_new,
@@ -457,7 +470,7 @@ def main():
         logger.warning("\n⚠️  Scan interrupted by user")
         db.update_scan_run(
             scan_run.id,
-            end_time=db.datetime.now(),
+            end_time=datetime.now(),
             success=False,
             error_message="Interrupted by user"
         )
@@ -465,7 +478,7 @@ def main():
         logger.error(f"\n❌ Scan failed: {e}", exc_info=True)
         db.update_scan_run(
             scan_run.id,
-            end_time=db.datetime.now(),
+            end_time=datetime.now(),
             success=False,
             error_message=str(e)
         )
