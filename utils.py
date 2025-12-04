@@ -8,30 +8,197 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 import requests
+from datetime import datetime, timedelta
+from pathlib import Path
+import time
+import functools
 
+
+# ==================== ERROR HANDLING ====================
+
+def retry_with_backoff(max_retries=3, initial_delay=1, backoff_factor=2, exceptions=(Exception,)):
+    """
+    Decorator to retry a function with exponential backoff.
+    
+    Args:
+        max_retries: Maximum number of retry attempts
+        initial_delay: Initial delay in seconds
+        backoff_factor: Multiplier for delay after each retry
+        exceptions: Tuple of exceptions to catch and retry
+    
+    Example:
+        @retry_with_backoff(max_retries=3, initial_delay=2)
+        def unreliable_api_call():
+            response = requests.get("https://api.example.com")
+            return response.json()
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = initial_delay
+            last_exception = None
+            
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    
+                    if attempt < max_retries:
+                        logging.warning(
+                            f"{func.__name__} failed (attempt {attempt + 1}/{max_retries + 1}): {e}. "
+                            f"Retrying in {delay}s..."
+                        )
+                        time.sleep(delay)
+                        delay *= backoff_factor
+                    else:
+                        logging.error(
+                            f"{func.__name__} failed after {max_retries + 1} attempts: {e}"
+                        )
+            
+            raise last_exception
+        
+        return wrapper
+    return decorator
+
+
+def timeout_handler(timeout_seconds):
+    """
+    Decorator to add timeout to functions (Unix/Linux only).
+    For Windows, use subprocess with timeout parameter instead.
+    
+    Args:
+        timeout_seconds: Maximum seconds before timeout
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            import signal
+            
+            def timeout_error(signum, frame):
+                raise TimeoutError(f"{func.__name__} timed out after {timeout_seconds}s")
+            
+            # Set the signal handler
+            signal.signal(signal.SIGALRM, timeout_error)
+            signal.alarm(timeout_seconds)
+            
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                signal.alarm(0)  # Disable the alarm
+            
+            return result
+        
+        return wrapper
+    return decorator
+
+
+class NetworkError(Exception):
+    """Custom exception for network-related errors."""
+    pass
+
+
+class RateLimitError(Exception):
+    """Custom exception for rate limit errors."""
+    pass
+
+
+def handle_github_response(response):
+    """
+    Handle GitHub API response and raise appropriate exceptions.
+    
+    Args:
+        response: requests.Response object
+    
+    Raises:
+        RateLimitError: If rate limit exceeded
+        NetworkError: For other network errors
+    """
+    if response.status_code == 403:
+        if 'rate limit' in response.text.lower():
+            raise RateLimitError("GitHub API rate limit exceeded")
+        raise NetworkError(f"GitHub API forbidden: {response.text}")
+    elif response.status_code == 401:
+        raise NetworkError("GitHub API authentication failed - check your token")
+    elif response.status_code >= 500:
+        raise NetworkError(f"GitHub API server error: {response.status_code}")
+    elif response.status_code >= 400:
+        raise NetworkError(f"GitHub API client error: {response.status_code} - {response.text}")
+    
+    return response
+
+
+# ==================== LOGGING SETUP ====================
 
 def setup_logging(log_file: Path, log_level: str = 'INFO'):
     """
-    Set up logging to both console and file.
+    Set up comprehensive logging with separate debug and error logs.
     
     Args:
-        log_file: Path to log file
+        log_file: Path to main log file
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR)
+    
+    Returns:
+        Configured logger instance
     """
     # Create logs directory if it doesn't exist
     log_file.parent.mkdir(parents=True, exist_ok=True)
     
-    # Configure logging
-    logging.basicConfig(
-        level=getattr(logging, log_level),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file, encoding='utf-8'),
-            logging.StreamHandler()
-        ]
+    # Create logger
+    logger = logging.getLogger('scanner')
+    logger.setLevel(logging.DEBUG)  # Capture all levels
+    
+    # Remove existing handlers to avoid duplicates
+    logger.handlers.clear()
+    
+    # Formatter for detailed logs
+    detailed_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - [%(levelname)s] - %(filename)s:%(lineno)d - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
     )
     
-    return logging.getLogger('scanner')
+    # Formatter for console (simpler)
+    console_formatter = logging.Formatter(
+        '%(asctime)s - [%(levelname)s] - %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    
+    # 1. Console Handler (INFO and above)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(getattr(logging, log_level))
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+    
+    # 2. Main Log File (all levels based on config)
+    main_file_handler = logging.FileHandler(log_file, encoding='utf-8', mode='a')
+    main_file_handler.setLevel(getattr(logging, log_level))
+    main_file_handler.setFormatter(detailed_formatter)
+    logger.addHandler(main_file_handler)
+    
+    # 3. Debug Log File (DEBUG and above) - separate file
+    debug_log = log_file.parent / 'debug.log'
+    debug_handler = logging.FileHandler(debug_log, encoding='utf-8', mode='a')
+    debug_handler.setLevel(logging.DEBUG)
+    debug_handler.setFormatter(detailed_formatter)
+    logger.addHandler(debug_handler)
+    
+    # 4. Error Log File (ERROR and above only) - separate file
+    error_log = log_file.parent / 'error.log'
+    error_handler = logging.FileHandler(error_log, encoding='utf-8', mode='a')
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(detailed_formatter)
+    logger.addHandler(error_handler)
+    
+    # Log startup
+    logger.info("=" * 60)
+    logger.info("Logging initialized")
+    logger.info(f"Main log: {log_file}")
+    logger.info(f"Debug log: {debug_log}")
+    logger.info(f"Error log: {error_log}")
+    logger.info(f"Log level: {log_level}")
+    logger.info("=" * 60)
+    
+    return logger
 
 
 def generate_finding_hash(file_path: str, line_number: int, secret_type: str, content: str = '') -> str:

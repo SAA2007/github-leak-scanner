@@ -9,6 +9,7 @@ import json
 import csv
 from pathlib import Path
 import logging
+from tqdm import tqdm
 
 # Import our modules
 from config import config
@@ -364,53 +365,63 @@ def main():
             logger.warning("⚠️  No repositories to scan")
             db.update_scan_run(scan_run.id, end_time=db.datetime.now(), repos_scanned=0)
             return
-        
         logger.info(f"📋 Scanning {len(repos)} repositories...")
+        print()  # Newline before progress bar
         
         total_findings = 0
         total_new = 0
         repos_scanned = 0
         
-        for i, repo_info in enumerate(repos, 1):
-            logger.info(f"\n[{i}/{len(repos)}] Processing: {repo_info.get('full_name', repo_info['name'])}")
-            logger.info(f"   ⭐ Stars: {repo_info.get('stars', 0)} | Priority: {repo_info.get('priority_score', 0):.2f}")
-            
-            # Clone repository
-            repo_path = clone_repo(repo_info)
-            if not repo_path:
-                continue
-            
-            # Save repo to database
-            db.get_or_create_repo(
-                repo_url=repo_info['url'],
-                owner=repo_info['owner'],
-                name=repo_info['name'],
-                stars=repo_info.get('stars', 0),
-                priority_score=repo_info.get('priority_score', 0),
-                discovered_via=config.scan_mode
-            )
-            
-            # Run scanners
-            gitleaks_results = run_gitleaks(repo_path)
-            truffle_results = run_trufflehog(repo_path)
-            
-            # Process findings
-            counts = process_findings(repo_info, gitleaks_results, truffle_results)
-            total_findings += counts['total']
-            total_new += counts['new']
-            
-            logger.info(f"   📊 Findings: {counts['total']} total, {counts['new']} new")
-            
-            # Update repo scan record
-            db.update_repo_scan(repo_info['url'])
-            repos_scanned += 1
-            
-            # Cleanup cloned repo
-            try:
-                import shutil
-                shutil.rmtree(repo_path)
-            except:
-                pass
+        # Progress bar for scanning
+        with tqdm(total=len(repos), desc="🔍 Scanning repos", unit="repo", ncols=100) as pbar:
+            for i, repo_info in enumerate(repos, 1):
+                repo_name = repo_info.get('full_name', repo_info['name'])
+                pbar.set_postfix_str(f"Current: {repo_name[:30]}...")
+                
+                logger.debug(f"[{i}/{len(repos)}] Processing: {repo_name}")
+                logger.debug(f"   ⭐ Stars: {repo_info.get('stars', 0)} | Priority: {repo_info.get('priority_score', 0):.2f}")
+                
+                # Clone repository
+                repo_path = clone_repo(repo_info)
+                if not repo_path:
+                    pbar.update(1)
+                    continue
+                
+                # Save repo to database
+                db.get_or_create_repo(
+                    repo_url=repo_info['url'],
+                    owner=repo_info['owner'],
+                    name=repo_info['name'],
+                    stars=repo_info.get('stars', 0),
+                    priority_score=repo_info.get('priority_score', 0),
+                    discovered_via=config.scan_mode
+                )
+                
+                # Run scanners
+                gitleaks_results = run_gitleaks(repo_path)
+                truffle_results = run_trufflehog(repo_path)
+                
+                # Process findings
+                counts = process_findings(repo_info, gitleaks_results, truffle_results)
+                total_findings += counts['total']
+                total_new += counts['new']
+                
+                logger.debug(f"   📊 Findings: {counts['total']} total, {counts['new']} new")
+                
+                # Update repo scan record
+                db.update_repo_scan(repo_info['url'])
+                repos_scanned += 1
+                
+                # Update progress bar
+                pbar.update(1)
+                pbar.set_postfix_str(f"Found: {total_new} new secrets")
+                
+                # Cleanup cloned repo
+                try:
+                    import shutil
+                    shutil.rmtree(repo_path)
+                except:
+                    pass
         
         # Update scan run
         db.update_scan_run(

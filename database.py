@@ -19,7 +19,7 @@ class ScannedUser(Base):
     
     id = Column(Integer, primary_key=True)
     username = Column(String(255), unique=True, nullable=False, index=True)
-    last_scan_date = Column(DateTime, default=datetime.now)
+    last_scan_date = Column(DateTime, nullable=True)  # No default - set when actually scanned
     scan_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now)
     
@@ -152,9 +152,15 @@ class DatabaseManager:
         session = self.get_session()
         try:
             user = session.query(ScannedUser).filter_by(username=username).first()
-            if not user or not user.last_scan_date:
+            if not user:
+                # User doesn't exist, so hasn't been scanned
                 return False
             
+            if not user.last_scan_date:
+                # User exists but no scan date recorded
+                return False
+            
+            from datetime import datetime
             time_diff = datetime.now() - user.last_scan_date
             return time_diff.total_seconds() < (hours * 3600)
         finally:
