@@ -13,10 +13,10 @@ from tqdm import tqdm
 from datetime import datetime
 
 # Import our modules
-from config import config
-from database import DatabaseManager
-from search_repos import search_and_prioritize
-from utils import setup_logging, generate_finding_hash, safe_get
+from src.core.config import config
+from src.database.database import DatabaseManager
+from src.core.search_repos import search_and_prioritize
+from src.utils.utils import setup_logging, generate_finding_hash, safe_get
 
 # Setup logging
 logger = setup_logging(config.log_file, config.log_level)
@@ -310,7 +310,7 @@ def save_reports(scan_run_id: int):
     
     session = db.get_session()
     try:
-        from database import Finding
+        from src.database.database import Finding
         findings = session.query(Finding).all()
         
         # Prepare data

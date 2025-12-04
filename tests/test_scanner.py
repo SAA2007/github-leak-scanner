@@ -9,6 +9,9 @@ import sys
 import os
 from pathlib import Path
 
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # Test results tracking
 tests_passed = 0
 tests_failed = 0
@@ -38,10 +41,10 @@ print()
 # Test 1: Import modules
 print("[1/8] Testing module imports...")
 try:
-    from config import config
-    from database import DatabaseManager
-    from utils import setup_logging, generate_finding_hash
-    from search_repos import RepoSearcher
+    from src.core.config import config
+    from src.database.database import DatabaseManager
+    from src.utils.utils import setup_logging, generate_finding_hash
+    from src.core.search_repos import RepoSearcher
     test_result("Module imports", True)
 except Exception as e:
     test_result("Module imports", False, str(e))
@@ -114,7 +117,7 @@ try:
     assert hash1 == hash2, "Same findingsshould produce same hash"
     assert hash1 != hash3, "Different findings should produce different hash"
     
-    from utils import calculate_priority_score
+    from src.utils.utils import calculate_priority_score
     score = calculate_priority_score(stars=5, pushed_at="2024-12-01T00:00:00Z", file_matches=2)
     assert 0 <= score <= 1, "Score should be between 0 and 1"
     

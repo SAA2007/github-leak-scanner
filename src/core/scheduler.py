@@ -10,8 +10,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 import signal
 import sys
 
-from config import config
-from utils import setup_logging
+from src.core.config import config
+from src.utils.utils import setup_logging
 
 # Setup logging
 logger = setup_logging(config.log_file, config.log_level)

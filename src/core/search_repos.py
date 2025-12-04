@@ -6,7 +6,7 @@ import logging
 import requests
 from datetime import datetime, timedelta
 from typing import List, Dict
-from utils import calculate_priority_score, wait_for_rate_limit, safe_get
+from src.utils.utils import calculate_priority_score, wait_for_rate_limit, safe_get
 
 logger = logging.getLogger('scanner.search')
 
@@ -250,7 +250,7 @@ if __name__ == '__main__':
     # Test search functionality
     import os
     from dotenv import load_dotenv
-    from database import DatabaseManager
+    from src.database.database import DatabaseManager
     
     load_dotenv()
     token = os.getenv('GITHUB_TOKEN')

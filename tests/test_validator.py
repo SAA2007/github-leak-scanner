@@ -3,8 +3,13 @@
 """Quick test of secret validation and containment system."""
 
 import sys
-from secret_validator import SecretValidator
-from containment import ContainmentSystem
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.validation.secret_validator import SecretValidator
+from src.validation.containment import ContainmentSystem
 
 print("=" * 80)
 print("🔐 Testing Secret Validation Module")

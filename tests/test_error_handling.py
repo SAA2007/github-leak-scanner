@@ -3,8 +3,13 @@
 """Test script for error handling utilities."""
 
 import sys
+import os
 import time
-from utils import retry_with_backoff, NetworkError, RateLimitError, handle_github_response
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.utils.utils import retry_with_backoff, NetworkError, RateLimitError, handle_github_response
 import requests
 
 print("=" * 60)
