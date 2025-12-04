@@ -1,26 +1,90 @@
-# Environment variables and secrets
+# ==================== SECURITY & SENSITIVE DATA ====================
+# Environment variables (contains secrets)
 .env
+.env.local
+.env.*.local
 *.env
 !.env.example
 
-# Database files
+# API Keys and tokens
+*.key
+*.pem
+*.token
+
+# ==================== DATABASES ====================
+# All database files
 *.db
+*.db-journal
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
+scans.db
+test_scans.db
+test*.db
 
-# Scan results and temporary files
+# ==================== SCAN OUTPUTS ====================
+# Scan results and reports
 scan_results/
-test_results/
-repos/
+findings.json
+findings.csv
+results/
+output/
+
+# ==================== LOGS ====================
+# All log files
 logs/
 *.log
+debug.log
+error.log
+scanner.log
 
-# Python
+# ==================== VALIDATION & CONTAINMENT ====================
+# Quarantine and containment folders
+CONTAINMENT/
+COORDINATES/
+quarantine/
+containment/
+
+# Test validation config
+.env.validation
+
+# ==================== TEST FILES ====================
+# Test databases
+test_*.db
+test_scans.db
+test_db.db
+
+# Test results and output
+test_results/
+test_output/
+test_*.json
+test_*.csv
+
+# ==================== CLONED REPOSITORIES ====================
+# Temporary cloned repos during scan
+repos/
+cloned_repos/
+temp_repos/
+tmp/
+
+# ==================== PYTHON ====================
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+pipenv/
+.virtualenv/
+
+# Distribution / packaging
 build/
 develop-eggs/
 dist/
@@ -36,24 +100,86 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Virtual environments
-venv/
-env/
-ENV/
-.venv
-
-# IDE
+# ==================== IDE & EDITORS ====================
+# VSCode
 .vscode/
+*.code-workspace
+
+# PyCharm / IntelliJ
 .idea/
+*.iml
+*.iws
+.idea_modules/
+
+# Vim
 *.swp
 *.swo
 *~
+.*.sw[a-z]
 
-# OS
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ==================== OS FILES ====================
+# macOS
 .DS_Store
-Thumbs.db
+.AppleDouble
+.LSOverride
+._*
 
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+.directory
+.Trash-*
+
+# ==================== TESTING & COVERAGE ====================
+# pytest
+.pytest_cache/
+.pytest_tmp/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ==================== MISC ====================
 # Backup files
 *.bak
 *.backup
+*.tmp
+*.temp
+
+# Node (if ever used)
+node_modules/
+package-lock.json
+
+# Secrets that might be accidentally created
+secrets/
+credentials/
+private/
