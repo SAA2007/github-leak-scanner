@@ -183,3 +183,8 @@ package-lock.json
 secrets/
 credentials/
 private/
+
+# External scanning tools (download separately)
+gitleaks.exe
+trufflehog*
+*.exe

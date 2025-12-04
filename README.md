@@ -19,28 +19,6 @@ Automated tool for discovering and scanning GitHub repositories for leaked API k
 ## 🚀 Quick Start
 
 ### Prerequisites
-
-1. **Python 3.8+**
-2. **Gitleaks** - Download from [gitleaks releases](https://github.com/gitleaks/gitleaks/releases)
-3. **TruffleHog** (optional) - Install via: `pip install trufflehog`
-4. **GitHub Personal Access Token** - [Create one here](https://github.com/settings/tokens)
-
-### Installation
-
-```bash
-# Clone the repository
-cd scan_repos
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Copy environment template
-copy .env.example .env
-
-# Edit .env and add your GitHub token
-notepad .env
-```
-
 ### Configuration
 
 Edit `.env` file with your settings:
