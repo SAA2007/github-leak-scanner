@@ -10,6 +10,7 @@
 
 # Scan results and temporary files
 scan_results/
+test_results/
 repos/
 logs/
 *.log
